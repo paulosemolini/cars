@@ -1,5 +1,9 @@
+import 'package:carros/commons/api_response.dart';
+import 'package:carros/commons/nav.dart';
+import 'package:carros/pages/homepage/home_page.dart';
 import 'package:carros/pages/widgets/app_button.dart';
 import 'package:carros/pages/widgets/text_field_widget.dart';
+import 'package:carros/webservice/login_api.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -12,11 +16,13 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _tLogin = TextEditingController(text: 'Paulo');
+  final TextEditingController _tLogin = TextEditingController(text: 'user');
 
-  final TextEditingController _tSenha = TextEditingController(text: '12');
+  final TextEditingController _tSenha = TextEditingController(text: '123');
 
   final _focusSenha = FocusNode();
+
+  bool _showProgress = false;
 
   @override
   void initState() {
@@ -40,6 +46,12 @@ class _LoginPageState extends State<LoginPage> {
       child: Container(
         padding: EdgeInsets.all(16),
         child: ListView(
+          padding: EdgeInsets.only(
+            bottom: 8,
+            left: 8,
+            right: 8,
+            top: 16,
+          ),
           children: [
             TextFieldWidget(
               labelText: 'Login',
@@ -93,31 +105,19 @@ class _LoginPageState extends State<LoginPage> {
             SizedBox(
               height: 20,
             ),
-            _button('Login', _onClickLogin),
+            //_button('Login', _onClickLogin),
+            AppButton(
+              'Login',
+              onPressed: _onClickLogin,
+              showProgress: _showProgress,
+            ),
           ],
         ),
       ),
     );
   }
 
-  _button(String text, Function() onPressed) {
-    return AppButton(text, onPressed: onPressed);
-    // return Container(
-    //   height: 46,
-    //   child: ElevatedButton(
-    //     onPressed: onPressed,
-    //     child: Text(
-    //       text,
-    //       style: TextStyle(
-    //         fontSize: 25,
-    //         fontWeight: FontWeight.bold,
-    //       ),
-    //     ),
-    //   ),
-    // );
-  }
-
-  _onClickLogin() {
+  _onClickLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -126,24 +126,61 @@ class _LoginPageState extends State<LoginPage> {
     String senha = _tSenha.text;
 
     debugPrint("Login: $login, Senha: $senha");
-  }
 
-  String? _validatorLogin(String? value) {
-    String t = value ?? '';
-    if (t.isEmpty) {
-      return 'Informe o usuário';
-    }
-    return null;
-  }
+    setState(() {
+      _showProgress = true;
+    });
 
-  String? _validatorSenha(String? value) {
-    String t = value ?? '';
-    if (t.isEmpty) {
-      return 'Digite a senha';
+    //bool ok = await LoginApi.login(login, senha);
+    ApiResponse response = await LoginApi.login(login, senha);
+
+    //if (ok) {
+    if (response.ok) {
+      push(context, HomePage());
+    } else {
+      showDialog(
+        barrierDismissible: false,
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return WillPopScope(
+            onWillPop: () async => false,
+            child: AlertDialog(
+              title: Text('Alerta'),
+              content: Text(response.msg),
+              actions: [
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      );
     }
-    if (t.length < 3) {
-      return 'A senha precisa ter pelo menos 3 números';
-    }
-    return null;
+    setState(() {
+      _showProgress = false;
+    });
   }
+}
+
+String? _validatorLogin(String? value) {
+  String t = value ?? '';
+  if (t.isEmpty) {
+    return 'Informe o usuário';
+  }
+  return null;
+}
+
+String? _validatorSenha(String? value) {
+  String t = value ?? '';
+  if (t.isEmpty) {
+    return 'Digite a senha';
+  }
+  if (t.length < 3) {
+    return 'A senha precisa ter pelo menos 3 números';
+  }
+  return null;
 }
